@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recap Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./vanilla-js-calendar.min.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <style>
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
+
+    /* --- TEMA BLACK & BLUE GLASS --- */
+    body { background: radial-gradient(circle at top center, #0f172a, #000000); color: #e2e8f0; font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #020617; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    
+    .glass-panel { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(59, 130, 246, 0.1); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); }
+    .glass-panel-hover:hover { background: rgba(30, 41, 59, 0.7); border-color: rgba(59, 130, 246, 0.3); transform: translateY(-1px); transition: all 0.2s ease; }
+    
+    aside { background: rgba(2, 6, 23, 0.8); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.03); }
+    
+    input, textarea { background: rgba(2, 6, 23, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); color: white; transition: all 0.2s; }
+    input:focus, textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); outline: none; }
+    
+    .btn-primary { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); transition: all 0.2s; }
+    .btn-primary:hover { box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5); filter: brightness(1.1); }
+    .btn-primary:disabled { background: #1e293b; box-shadow: none; cursor: not-allowed; opacity: 0.5; filter: grayscale(1); }
+    
+    .nav-item { transition: all 0.2s; border-left: 3px solid transparent; }
+    .nav-item.active { background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%); border-left-color: #3b82f6; color: #fff; }
+    .nav-item:hover:not(.active) { background: rgba(255, 255, 255, 0.02); color: #e2e8f0; }
+    
+    .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .vanilla-calendar { background: transparent !important; box-shadow: none !important; }
+    .vanilla-calendar-day__btn_selected { background-color: #2563eb !important; }
+    
+    .game-card { transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.05); }
+    .game-card:hover { border-color: rgba(59, 130, 246, 0.3); background: rgba(255,255,255,0.03); }
+    .game-card.active-game { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+    .game-card.completed { opacity: 0.8; border-color: #22c55e; background: rgba(34, 197, 94, 0.05); }
+    
+    .progress-bar-bg { background: rgba(255,255,255,0.1); border-radius: 4px; height: 6px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden selection:bg-blue-600 selection:text-white">
+  
+  <aside class="w-64 flex flex-col h-full shadow-2xl z-20">
+    <div class="p-6 mb-2 flex items-center gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/50 border border-blue-500/20">
+        <span class="text-xl font-bold text-white">R</span>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold text-white tracking-wide">Recap</h1>
+        <p class="text-xs text-blue-400 font-medium tracking-wider uppercase">Monitor</p>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 space-y-1">
+      <button id="nav-metas" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-slate-400 text-left active">
+        <i class="ph-bold ph-target text-lg"></i><span class="font-medium">Metas Diárias</span>
+      </button>
+      <button id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-slate-400 text-left">
+        <i class="ph-bold ph-chart-bar text-lg"></i><span class="font-medium">Dashboard</span>
+      </button>
+      <button id="nav-calendar" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-slate-400 text-left">
+        <i class="ph-bold ph-calendar text-lg"></i><span class="font-medium">Calendário</span>
+      </button>
+      <button id="nav-config" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-slate-400 text-left">
+        <i class="ph-bold ph-gear text-lg"></i><span class="font-medium">Configurações</span>
+      </button>
+      <button id="nav-logs" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-slate-400 text-left">
+        <i class="ph-bold ph-terminal-window text-lg"></i><span class="font-medium">Logs</span>
+      </button>
+    </nav>
+
+    <div class="p-4 mt-auto">
+      <button id="btn-open-log-file" class="w-full glass-panel glass-panel-hover flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm text-slate-300 transition-all">
+        <i class="ph-bold ph-folder-open"></i><span>Abrir Pasta</span>
+      </button>
+      <p class="text-center text-[10px] text-slate-600 mt-3">v1.5.0 • Recap Monitor</p>
+    </div>
+  </aside>
+
+  <main class="flex-1 flex flex-col relative overflow-hidden">
+    <div class="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-900/5 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div id="update-toast" class="hidden absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-4 border border-green-400/30 backdrop-blur-md animate-bounce">
+        <div class="flex items-center gap-2">
+            <i class="ph-bold ph-download-simple text-xl"></i>
+            <div>
+                <p class="font-bold text-sm">Atualização Pronta!</p>
+                <p class="text-xs opacity-90">Reinicie para aplicar.</p>
+            </div>
+        </div>
+        <button id="btn-restart-update" class="bg-white text-green-700 px-3 py-1 rounded-full text-xs font-bold hover:bg-gray-100 transition-colors">
+            Reiniciar
+        </button>
+    </div>
+
+    <header class="h-20 flex items-center justify-between px-8 z-10 border-b border-white/5 backdrop-blur-sm">
+      <div class="flex items-center gap-6 flex-1">
+        <div class="flex items-center gap-3 bg-black/20 px-4 py-2 rounded-lg border border-white/5">
+            <div id="status-indicator" class="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
+            <div class="flex flex-col">
+                <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Status</span>
+                <span id="current-activity-display" class="text-xs font-medium text-slate-300">Aguardando seleção...</span>
+            </div>
+        </div>
+
+        <div class="h-8 w-px bg-white/5 mx-2"></div>
+        
+        <div class="flex flex-col">
+          <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Pasta Monitorada</span>
+          <span id="monitoring-path-display" class="text-xs font-mono text-slate-400 truncate max-w-[300px] opacity-80 cursor-help" title="Caminho da pasta">---</span>
+        </div>
+      </div>
+      
+      <button id="btn-select-folder" class="btn-primary px-5 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center gap-2">
+        <i class="ph-bold ph-folder"></i> Selecionar Pasta
+      </button>
+      
+      <input type="hidden" id="game-name">
+    </header>
+
+    <div class="flex-1 overflow-y-auto p-8 z-10 relative">
+      
+      <div id="page-metas" class="fade-in space-y-6 max-w-6xl mx-auto">
+        
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h2 class="text-2xl font-bold text-white">Suas Metas Diárias</h2>
+                <p class="text-sm text-slate-400">Selecione um jogo para iniciar a contagem automática.</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="btn-import-list" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors border border-white/10 flex items-center gap-2">
+                    <i class="ph-bold ph-download-simple"></i> Importar
+                </button>
+
+                <button id="btn-reset-day" class="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 text-sm font-medium transition-colors flex items-center gap-2">
+                    <i class="ph-bold ph-arrow-counter-clockwise"></i> Resetar
+                </button>
+                <button id="btn-add-game" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <i class="ph-bold ph-plus"></i> Adicionar
+                </button>
+            </div>
+        </div>
+
+        <div id="games-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+        <div id="add-game-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+            <div class="glass-panel p-6 rounded-2xl w-full max-w-md m-4 shadow-2xl border border-white/10">
+                <h3 class="text-xl font-bold text-white mb-4">Adicionar Jogo à Lista</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nome do Jogo</label>
+                        <input type="text" id="new-game-name" class="w-full p-3 rounded-lg focus:border-blue-500" placeholder="Ex: Valorant">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Meta (minutos)</label>
+                        <input type="number" id="new-game-time" class="w-full p-3 rounded-lg focus:border-blue-500" placeholder="Ex: 60" min="1">
+                    </div>
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button id="btn-cancel-add" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">Cancelar</button>
+                        <button id="btn-confirm-add" class="btn-primary px-6 py-2 rounded-lg text-white font-medium">Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="import-list-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+            <div class="glass-panel p-6 rounded-2xl w-full max-w-md m-4 shadow-2xl border border-white/10">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-white">Importar Lista do Bot</h3>
+                    <button id="btn-close-import" class="text-slate-400 hover:text-white"><i class="ph-bold ph-x"></i></button>
+                </div>
+                
+                <div class="space-y-4">
+                    <p class="text-sm text-slate-400">
+                        No Discord, use <code>/exportarlista</code>, copie o código gerado e cole abaixo.
+                        <br><span class="text-yellow-500 text-xs">⚠️ Isso substituirá sua lista atual no App.</span>
+                    </p>
+                    
+                    <textarea id="import-code-input" class="w-full p-3 rounded-lg bg-slate-900 border border-white/10 text-white focus:border-blue-500 text-xs font-mono h-32 resize-none" placeholder="Cole o código aqui..."></textarea>
+                    
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button id="btn-confirm-import" class="btn-primary px-6 py-2 rounded-lg text-white font-medium w-full">
+                            Carregar Lista
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+      </div>
+
+      <div id="page-dashboard" class="hidden fade-in space-y-6 max-w-6xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+            <h3 class="text-sm font-medium text-blue-400 uppercase tracking-wider mb-1">Tempo (Semana)</h3>
+            <div class="flex items-baseline gap-2">
+              <p id="stats-weekly" class="text-5xl font-bold text-white tracking-tight drop-shadow-lg">00:00</p>
+              <span class="text-sm text-slate-400 font-medium">hrs</span>
+            </div>
+          </div>
+          <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+            <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wider mb-1">Tempo (Mês)</h3>
+            <div class="flex items-baseline gap-2">
+              <p id="stats-monthly" class="text-5xl font-bold text-white tracking-tight drop-shadow-lg">00:00</p>
+              <span class="text-sm text-slate-400 font-medium">hrs</span>
+            </div>
+          </div>
+        </div>
+        
+        <section class="glass-panel rounded-2xl overflow-hidden flex flex-col h-[400px]">
+          <div class="px-6 py-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-white">Entradas Recentes</h2>
+            <span class="text-xs text-slate-500 bg-slate-900/80 border border-white/5 px-2 py-1 rounded">Local</span>
+          </div>
+          <div class="flex-1 overflow-y-auto p-2">
+            <ul id="recent-videos-list" class="space-y-2"></ul>
+          </div>
+        </section>
+      </div>
+
+      <div id="page-calendar" class="hidden fade-in h-full flex flex-col max-w-6xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+          <div class="lg:col-span-2 flex flex-col gap-6">
+            <div class="glass-panel p-6 rounded-2xl flex-1 flex flex-col">
+              <div id="calendar-container" class="flex-1 min-h-[350px]"></div>
+            </div>
+            <div class="glass-panel p-5 rounded-2xl flex items-center gap-4">
+                 <button id="btn-export-all" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm">Exportar Tudo</button>
+            </div>
+          </div>
+          <div class="glass-panel p-0 rounded-2xl flex flex-col h-full overflow-hidden">
+            <div class="p-6 border-b border-white/5 bg-white/5">
+              <p class="text-xs text-blue-400 font-bold uppercase">Resumo do Dia</p>
+              <h2 id="calendar-selected-day" class="text-xl font-bold text-white mt-1">Selecione...</h2>
+              <p id="calendar-total-time" class="text-slate-400 mt-1 font-mono text-sm">--</p>
+              <button id="btn-copy-summary" class="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-xs font-medium border border-white/10 transition-colors disabled:opacity-50" disabled>📋 Copiar JSON (Discord)</button>
+            </div>
+            <div id="calendar-entry-list" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="page-config" class="hidden fade-in max-w-2xl mx-auto mt-10">
+        <div class="glass-panel p-8 rounded-2xl border-t-4 border-blue-600">
+          <h2 class="text-xl font-bold text-white mb-6">Configurações</h2>
+          <div class="space-y-6">
+            <div>
+              <label class="block text-xs font-bold text-blue-400 uppercase mb-2">Seu ID do Discord</label>
+              <div class="flex gap-3">
+                <input type="text" id="discord-id-input" class="flex-1 p-3 rounded-lg" placeholder="Cole seu ID aqui...">
+                <button id="btn-save-config" class="btn-primary px-6 rounded-lg font-semibold">Salvar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="page-logs" class="hidden fade-in h-full flex flex-col">
+        <div class="flex items-center justify-between mb-4 px-2">
+          <h2 class="text-xl font-bold text-white">Logs</h2>
+        </div>
+        <div id="logs-container" class="flex-1 bg-[#02040a] rounded-2xl border border-white/5 p-4 overflow-y-auto font-mono text-xs text-slate-400"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="./vanilla-js-calendar.min.js"></script>
+  
+  <script>
+    // --- ESTADO & HELPERS ---
+    let allDailyData = {}, calendar = null, selectedDate = null;
+    let metaList = [], activeGame = null;
+
+    const addLog = (msg, type='info') => {
+      const box = document.getElementById('logs-container');
+      if(!box) return;
+      const colors = { info: 'text-blue-400', warn: 'text-yellow-400', error: 'text-red-500 font-bold', success: 'text-green-400' };
+      const div = document.createElement('div');
+      div.className = `py-1 border-b border-white/5 last:border-0 ${colors[type]||'text-slate-500'}`;
+      div.innerHTML = `<span class="opacity-40 mr-2 text-slate-600">${new Date().toLocaleTimeString()}</span> ${msg}`;
+      box.prepend(div);
+    };
+
+    const formatDuration = (s) => {
+      if(!s || s<0) return "00:00:00";
+      const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=Math.floor(s%60);
+      return [h,m,sec].map(v=>String(v).padStart(2,'0')).join(':');
+    };
+
+    // --- NAVEGAÇÃO ---
+    function showPage(id) {
+      ['page-metas', 'page-dashboard','page-calendar','page-config','page-logs'].forEach(p => {
+        const el = document.getElementById(p);
+        if(el) el.classList.add('hidden');
+      });
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      
+      const btnMap = {
+          'page-metas': 'nav-metas',
+          'page-dashboard':'nav-dashboard',
+          'page-calendar':'nav-calendar',
+          'page-config':'nav-config',
+          'page-logs':'nav-logs'
+      };
+      
+      const pageEl = document.getElementById(id);
+      const btnEl = document.getElementById(btnMap[id]);
+
+      if(pageEl) pageEl.classList.remove('hidden');
+      if(btnEl) btnEl.classList.add('active');
+      
+      if(id==='page-calendar' && !calendar) initCalendar();
+    }
+
+    // --- LÓGICA DA LISTA DE METAS ---
+    function renderMetaList() {
+        const grid = document.getElementById('games-grid');
+        if(!grid) return;
+        grid.innerHTML = '';
+
+        if (metaList.length === 0) {
+            grid.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-12 text-slate-600 border-2 border-dashed border-white/5 rounded-2xl">
+                    <i class="ph-bold ph-game-controller text-4xl mb-2 opacity-50"></i>
+                    <p>Nenhum jogo na lista de hoje.</p>
+                    <button onclick="openAddModal()" class="mt-4 text-blue-500 hover:underline text-sm">Adicionar Agora</button>
+                </div>
+            `;
+            updateStatusDisplay();
+            return;
+        }
+
+        metaList.forEach(game => {
+            const isActive = game.name === activeGame;
+            const progress = Math.min(100, (game.currentSeconds / (game.targetMinutes * 60)) * 100);
+            const isCompleted = progress >= 100;
+            
+            const card = document.createElement('div');
+            let classes = 'game-card glass-panel p-5 rounded-xl relative cursor-pointer group ';
+            if (isActive) classes += 'active-game ';
+            if (isCompleted && !isActive) classes += 'completed ';
+
+            card.className = classes;
+            
+            card.onclick = (e) => {
+                if(e.target.closest('.btn-remove')) return;
+                toggleGame(game.name);
+            };
+
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h3 class="font-bold text-lg text-white truncate pr-2">${game.name}</h3>
+                        <span class="text-xs ${isActive ? 'text-blue-300' : 'text-slate-400'} font-mono">
+                            ${isActive ? '● GRAVANDO...' : (isCompleted ? '✓ Concluído' : 'Aguardando')}
+                        </span>
+                    </div>
+                    <button class="btn-remove text-slate-600 hover:text-red-500 transition-colors p-1" onclick="removeGame('${game.name}')">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>
+                </div>
+                
+                <div class="flex justify-between text-xs mb-1 font-mono">
+                    <span class="${isCompleted ? 'text-green-400' : 'text-slate-300'}">${formatDuration(game.currentSeconds)}</span>
+                    <span class="text-slate-500">/ ${game.targetMinutes}m</span>
+                </div>
+                
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill ${isCompleted ? 'bg-green-500' : (isActive ? 'bg-blue-500 animate-pulse' : 'bg-slate-600')}" style="width: ${progress}%"></div>
+                </div>
+                
+                ${isActive ? '<div class="absolute inset-0 border-2 border-blue-500 rounded-xl pointer-events-none shadow-[0_0_20px_rgba(59,130,246,0.3)]"></div>' : ''}
+            `;
+            grid.appendChild(card);
+        });
+        updateStatusDisplay();
+    }
+
+    function updateStatusDisplay() {
+        const display = document.getElementById('current-activity-display');
+        const indicator = document.getElementById('status-indicator');
+        const gameInput = document.getElementById('game-name');
+        
+        if(!display || !indicator) return;
+
+        if (activeGame) {
+            display.innerText = `Gravando: ${activeGame}`;
+            display.classList.add('text-blue-400');
+            indicator.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_10px_#3b82f6]';
+            if(gameInput) {
+                gameInput.value = activeGame;
+                gameInput.disabled = true;
+            }
+        } else {
+            display.innerText = 'Aguardando seleção...';
+            display.classList.remove('text-blue-400');
+            indicator.className = 'w-2.5 h-2.5 rounded-full bg-slate-600';
+            if(gameInput) {
+                gameInput.value = '';
+                gameInput.disabled = true;
+            }
+        }
+    }
+
+    async function toggleGame(name) {
+        if(!window.electron) return;
+        const res = await window.electron.setActiveGame(name);
+        metaList = res.metaList;
+        activeGame = res.activeGame;
+        renderMetaList();
+    }
+
+    async function removeGame(name) {
+        if(!confirm(`Remover "${name}" da lista?`)) return;
+        const res = await window.electron.removeGameFromMeta(name);
+        metaList = res.metaList;
+        activeGame = res.activeGame;
+        renderMetaList();
+    }
+
+    // Modal Functions
+    window.openAddModal = () => {
+        const modal = document.getElementById('add-game-modal');
+        if(modal) {
+            modal.classList.remove('hidden');
+            const input = document.getElementById('new-game-name');
+            if(input) input.focus();
+        }
+    };
+
+    window.openImportModal = () => {
+        const modal = document.getElementById('import-list-modal');
+        if(modal) {
+            modal.classList.remove('hidden');
+            const input = document.getElementById('import-code-input');
+            if(input) input.focus();
+        }
+    };
+    
+    // --- RENDERIZAÇÃO DE LISTAS ANTIGAS ---
+    function updateRecent(list) {
+      const ul = document.getElementById('recent-videos-list');
+      if(!ul) return;
+      ul.innerHTML = '';
+      if(!list.length) {
+        ul.innerHTML = '<li class="py-8 text-center text-slate-600 italic text-sm">Nenhum registro encontrado.</li>';
+        return;
+      }
+      list.forEach(v => {
+        const li = document.createElement('li');
+        li.className = 'group flex justify-between items-center p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/5';
+        li.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-xs border border-blue-500/20">▶</div>
+            <div>
+              <p class="text-sm font-medium text-slate-300">${v.gameName}</p>
+              <p class="text-[10px] text-slate-500 font-mono">${new Date(v.timestamp).toLocaleString()}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="text-sm font-mono font-bold text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/10">${formatDuration(v.duration)}</span>
+            <button onclick="deleteItem('${v.timestamp}')" class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-500 transition-all p-1" title="Excluir">
+              <i class="ph-bold ph-trash"></i>
+            </button>
+          </div>
+        `;
+        ul.appendChild(li);
+      });
+    }
+
+    // --- CALENDÁRIO LÓGICA ---
+    function initCalendar() {
+      if(typeof VanillaCalendar === 'undefined') return addLog('Erro Crítico: Lib Calendar não carregou.', 'error');
+      calendar = new VanillaCalendar('#calendar-container', {
+        actions: { clickDay(e, self) { selectDay(self.selectedDates[0]); } }
+      });
+      if(window.electron) window.electron.getDailyData().then(d => { allDailyData=d; updateCalendarMarkers(d); });
+    }
+
+    function updateCalendarMarkers(data) {
+      if(!calendar) return;
+      const m = {};
+      for(let d in data) if(data[d].totalSeconds>0) m[d]=true;
+      calendar.markers = m;
+      calendar.update();
+    }
+
+    function selectDay(date) {
+      selectedDate = date;
+      const selDay = document.getElementById('calendar-selected-day');
+      if(selDay) selDay.innerText = new Date(date+'T12:00:00').toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+      
+      const data = allDailyData[date];
+      const list = document.getElementById('calendar-entry-list');
+      const btnCopy = document.getElementById('btn-copy-summary');
+      
+      if(!list) return;
+      list.innerHTML = '';
+
+      if(data) {
+        const totalEl = document.getElementById('calendar-total-time');
+        if(totalEl) totalEl.innerText = `Total Acumulado: ${formatDuration(data.totalSeconds)}`;
+        
+        data.entries.forEach(v => {
+          const div = document.createElement('div');
+          div.className = 'flex justify-between items-center text-xs text-slate-400 p-3 bg-slate-900/50 rounded-lg border border-white/5 hover:border-blue-500/30 transition-colors';
+          div.innerHTML = `<span>${v.gameName}</span> <span class="font-mono text-blue-400">${formatDuration(v.duration)}</span>`;
+          list.appendChild(div);
+        });
+        if(btnCopy) {
+            btnCopy.disabled = false; 
+            btnCopy.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      } else {
+        const totalEl = document.getElementById('calendar-total-time');
+        if(totalEl) totalEl.innerText = 'Sem registros';
+        list.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-700 gap-2"><span class="text-2xl opacity-50">💤</span><p class="text-sm">Nada gravado neste dia.</p></div>';
+        if(btnCopy) {
+            btnCopy.disabled = true; 
+            btnCopy.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+      }
+    }
+
+    // --- AÇÕES GLOBAIS ---
+    window.deleteItem = async (ts) => {
+      if(!confirm("Deseja excluir este registro permanentemente?")) return;
+      if(!window.electron) return;
+      try {
+        const res = await window.electron.deleteVideoEntry(ts);
+        const statsW = document.getElementById('stats-weekly');
+        const statsM = document.getElementById('stats-monthly');
+        if(statsW) statsW.innerText = formatDuration(res.stats.totalWeekly);
+        if(statsM) statsM.innerText = formatDuration(res.stats.totalMonthly);
+        updateRecent(res.recentVideos);
+        const d = await window.electron.getDailyData();
+        allDailyData = d;
+        updateCalendarMarkers(d);
+        if(selectedDate) selectDay(selectedDate);
+        addLog("Registro excluído com sucesso.", 'warn');
+      } catch(e) { addLog("Erro ao excluir: "+e.message, 'error'); }
+    };
+
+    // --- INICIALIZAÇÃO ---
+    window.onload = () => {
+      // Nav Clicks
+      ['metas', 'dashboard','calendar','config','logs'].forEach(p => {
+        const el = document.getElementById('nav-'+p);
+        if(el) el.onclick = () => showPage('page-'+p);
+      });
+      
+      // Event Listeners
+      const btnCancelAdd = document.getElementById('btn-cancel-add');
+      if(btnCancelAdd) {
+          btnCancelAdd.onclick = () => {
+            const modal = document.getElementById('add-game-modal');
+            if(modal) modal.classList.add('hidden');
+          };
+      }
+      
+      const btnConfirmAdd = document.getElementById('btn-confirm-add');
+      if(btnConfirmAdd) {
+          btnConfirmAdd.onclick = async () => {
+            const nameInput = document.getElementById('new-game-name');
+            const timeInput = document.getElementById('new-game-time');
+            
+            const name = nameInput ? nameInput.value.trim() : '';
+            const time = timeInput ? parseInt(timeInput.value) : 0;
+            
+            if(!name || !time || time <= 0) {
+                alert('Preencha o nome e um tempo válido.');
+                return;
+            }
+            
+            if(window.electron) {
+                const res = await window.electron.addGameToMeta({ name, targetMinutes: time });
+                metaList = res.metaList;
+                activeGame = res.activeGame;
+                renderMetaList();
+                
+                const modal = document.getElementById('add-game-modal');
+                if(modal) modal.classList.add('hidden');
+                if(nameInput) nameInput.value = '';
+                if(timeInput) timeInput.value = '';
+            }
+          };
+      }
+
+      const btnAddGame = document.getElementById('btn-add-game');
+      if(btnAddGame) btnAddGame.onclick = window.openAddModal;
+      
+      const btnResetDay = document.getElementById('btn-reset-day');
+      if(btnResetDay) {
+          btnResetDay.onclick = async () => {
+            if(!confirm("Isso irá zerar o progresso de TODOS os jogos de hoje. Continuar?")) return;
+            if(window.electron) {
+                const res = await window.electron.resetDailyMetas();
+                metaList = res.metaList;
+                activeGame = res.activeGame;
+                renderMetaList();
+            }
+          };
+      }
+
+      const btnCloseImport = document.getElementById('btn-close-import');
+      if(btnCloseImport) {
+          btnCloseImport.onclick = () => {
+            const modal = document.getElementById('import-list-modal');
+            if(modal) modal.classList.add('hidden');
+          };
+      }
+      
+      const btnImportList = document.getElementById('btn-import-list');
+      if(btnImportList) btnImportList.onclick = window.openImportModal;
+      
+      // --- CORREÇÃO: IMPORTAÇÃO DE JSON PURO ---
+      const btnConfirmImport = document.getElementById('btn-confirm-import');
+      if(btnConfirmImport) {
+          btnConfirmImport.onclick = async () => {
+            const input = document.getElementById('import-code-input');
+            let code = input ? input.value.trim() : '';
+            
+            if (!code) return alert('Por favor, cole o código de importação.');
+
+            // Limpeza de Markdown (crases)
+            code = code.replace(/^```(json)?/g, '').replace(/```$/g, '').trim();
+
+            try {
+                // Parse direto do JSON (AQUI ESTAVA O ERRO DE atob)
+                const data = JSON.parse(code);
+
+                if (!data.games || !Array.isArray(data.games)) {
+                    throw new Error('Formato de lista inválido.');
+                }
+
+                if(!confirm(`Deseja importar a lista "${data.name || 'Sem Nome'}" com ${data.games.length} jogos? Isso substituirá sua lista atual no App.`)) {
+                    return;
+                }
+
+                if(window.electron) {
+                    const res = await window.electron.importMetaList(data.games);
+                    metaList = res.metaList;
+                    activeGame = res.activeGame;
+                    renderMetaList();
+
+                    const modal = document.getElementById('import-list-modal');
+                    if(modal) modal.classList.add('hidden');
+                    if(input) input.value = '';
+                    addLog(`Lista "${data.name}" importada com sucesso!`, 'success');
+                } else {
+                     alert("Erro: window.electron não encontrado. Verifique o preload.js");
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert('Código inválido. Certifique-se de copiar APENAS o texto JSON (com chaves {}).\nDetalhes: ' + e.message);
+            }
+          };
+      }
+      // -------------------------------------------
+
+      if(window.electron) {
+        const btnSelectFolder = document.getElementById('btn-select-folder');
+        if(btnSelectFolder) {
+            btnSelectFolder.onclick = async () => {
+              const p = await window.electron.selectFolder();
+              const display = document.getElementById('monitoring-path-display');
+              if(p && display) display.innerText = p;
+            };
+        }
+        
+        const btnOpenLog = document.getElementById('btn-open-log-file');
+        if(btnOpenLog) btnOpenLog.onclick = () => window.electron.openLogFile();
+        
+        const btnScanNow = document.getElementById('btn-scan-now');
+        if(btnScanNow) {
+            btnScanNow.onclick = async () => {
+                addLog('Scan iniciado...', 'info');
+                const res = await window.electron.scanFolder();
+                addLog(res.message, res.success?'info':'warn');
+            };
+        }
+        
+        const btnExportAll = document.getElementById('btn-export-all');
+        if(btnExportAll) {
+            btnExportAll.onclick = async () => {
+                const res = await window.electron.exportData(null);
+                addLog(res.message, res.success?'info':'error');
+            };
+        }
+        
+        const btnSaveConfig = document.getElementById('btn-save-config');
+        if(btnSaveConfig) {
+            btnSaveConfig.onclick = () => {
+                const input = document.getElementById('discord-id-input');
+                const id = input ? input.value : '';
+                window.electron.saveDiscordId(id);
+                addLog('ID do Discord salvo com sucesso!', 'success');
+            };
+        }
+
+        const btnCopySummary = document.getElementById('btn-copy-summary');
+        if(btnCopySummary) {
+            btnCopySummary.onclick = () => {
+                if(!selectedDate || !allDailyData[selectedDate]) return;
+                const data = allDailyData[selectedDate];
+                const payload = {
+                    exportDate: new Date().toISOString(),
+                    filterDate: selectedDate,
+                    totalVideos: data.entries.length,
+                    videos: data.entries
+                };
+                navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+                    .then(() => addLog("JSON do dia copiado para a área de transferência!", 'info'))
+                    .catch(err => addLog("Erro ao copiar: " + err, 'error'));
+            };
+        }
+
+        window.electron.onLoadData((d) => {
+          const monPath = document.getElementById('monitoring-path-display');
+          if(d.monitoringPath && monPath) monPath.innerText = d.monitoringPath;
+          
+          metaList = d.metaList || [];
+          activeGame = d.activeGame;
+          renderMetaList(); 
+
+          const discordInput = document.getElementById('discord-id-input');
+          if(d.discordId && discordInput) discordInput.value = d.discordId;
+
+          const weekly = document.getElementById('stats-weekly');
+          const monthly = document.getElementById('stats-monthly');
+          if(weekly) weekly.innerText = formatDuration(d.stats.totalWeekly);
+          if(monthly) monthly.innerText = formatDuration(d.stats.totalMonthly);
+          
+          updateRecent(d.recentVideos);
+        });
+
+        window.electron.onMetaUpdate((d) => {
+            metaList = d.metaList;
+            activeGame = d.activeGame;
+            renderMetaList();
+        });
+
+        window.electron.onVideoProcessed((d) => {
+          const weekly = document.getElementById('stats-weekly');
+          const monthly = document.getElementById('stats-monthly');
+          if(weekly) weekly.innerText = formatDuration(d.stats.totalWeekly);
+          if(monthly) monthly.innerText = formatDuration(d.stats.totalMonthly);
+          
+          updateRecent(d.recentVideos);
+          
+          const date = new Date(d.video.timestamp).toISOString().split('T')[0];
+          if(!allDailyData[date]) allDailyData[date] = { totalSeconds: 0, entries: [] };
+          allDailyData[date].totalSeconds += d.video.duration;
+          allDailyData[date].entries.push(d.video);
+          updateCalendarMarkers(allDailyData);
+          
+          addLog(`Novo vídeo: ${d.video.gameName} (${formatDuration(d.video.duration)})`, 'info');
+        });
+
+        window.electron.onLogMessage((l) => addLog(l.message, l.level));
+        
+        // AUTO UPDATE LISTENER
+        window.electron.onUpdateReady(() => {
+            const toast = document.getElementById('update-toast');
+            if(toast) toast.classList.remove('hidden');
+        });
+        
+        const btnUpdate = document.getElementById('btn-restart-update');
+        if(btnUpdate) {
+            btnUpdate.onclick = () => window.electron.restartAndUpdate();
+        }
+      } else {
+        addLog("Modo Preview: Backend Electron não detectado.", 'warn');
+      }
+
+      showPage('page-metas');
+    };
+  </script>
+</body>
+</html>
